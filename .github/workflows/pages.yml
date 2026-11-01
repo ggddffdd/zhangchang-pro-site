@@ -11,42 +11,7 @@ permissions:
   id-token: write
 
 jobs:
-  enable-branch-source:
-    runs-on: ubuntu-latest
-    outputs:
-      enabled: ${{ steps.branch_source.outputs.enabled }}
-    steps:
-      - name: Enable Pages from the default branch root
-        id: branch_source
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -u
-          repo="${{ github.repository }}"
-          enabled=false
-
-          if gh api "repos/${repo}/pages" > /tmp/pages.json 2>/tmp/pages.err; then
-            echo "Pages site already exists"
-            cat /tmp/pages.json
-            enabled=true
-          elif gh api --method POST "repos/${repo}/pages" \
-              -f build_type=legacy \
-              -f "source[branch]=main" \
-              -f "source[path]=/" > /tmp/pages.json 2>/tmp/pages.err; then
-            echo "Enabled GitHub Pages from main:/"
-            cat /tmp/pages.json
-            gh api --method POST "repos/${repo}/pages/builds" > /tmp/build.json 2>/tmp/build.err || cat /tmp/build.err
-            enabled=true
-          else
-            echo "Branch source was not enabled:"
-            cat /tmp/pages.err
-          fi
-
-          echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
-
   deploy:
-    needs: enable-branch-source
-    if: needs.enable-branch-source.outputs.enabled != 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -54,11 +19,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Prepare static files
         run: |
